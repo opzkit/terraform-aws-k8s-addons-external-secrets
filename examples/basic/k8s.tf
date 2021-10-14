@@ -1,10 +1,9 @@
 locals {
-  zone   = "example.com"
-  name   = "k8s.${local.zone}"
-  region = "eu-west-1"
+  zone       = "example.com"
+  name       = "k8s.${local.zone}"
+  region     = "eu-west-1"
+  account_id = "012345678901"
 }
-
-data "aws_caller_identity" "current" {}
 
 resource "aws_iam_role" "kubernetes_admin" {
   assume_role_policy = jsonencode({
@@ -14,7 +13,7 @@ resource "aws_iam_role" "kubernetes_admin" {
         Condition = {}
         Effect    = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::724902258495:root"
+          AWS = "arn:aws:iam::${local.account_id}:root"
         }
       },
     ]
@@ -26,7 +25,7 @@ resource "aws_iam_role" "kubernetes_admin" {
 module "external_secrets" {
   source     = "opzkit/k8s-addons-external-secrets/aws"
   version    = "8.3.0"
-  account_id = data.aws_caller_identity.current.account_id
+  account_id = local.account_id
   name       = local.name
   region     = local.region
 }
@@ -47,20 +46,20 @@ module "k8s-network" {
 }
 
 module "k8s" {
-  depends_on              = [module.state_store]
-  source                  = "opzkit/k8s/aws"
-  version                 = "0.1.2"
-  name                    = local.name
-  region                  = local.region
-  dns_zone                = local.zone
-  kubernetes_version      = "1.21.5"
-  master_count            = 3
-  vpc_id                  = module.k8s-network.vpc_id
-  public_subnet_ids       = module.k8s-network.public_subnets
-  iam_role_name           = aws_iam_role.kubernetes_admin.arn
-  state_store_bucket_name = module.state_store.bucket
-  admin_ssh_key           = "../dummy_ssh_private"
-  aws_oidc_provider       = true
+  depends_on         = [module.state_store]
+  source             = "opzkit/k8s/aws"
+  version            = "0.2.0"
+  name               = local.name
+  region             = local.region
+  dns_zone           = local.zone
+  kubernetes_version = "1.21.5"
+  master_count       = 3
+  vpc_id             = module.k8s-network.vpc_id
+  public_subnet_ids  = module.k8s-network.public_subnets
+  iam_role_name      = aws_iam_role.kubernetes_admin.arn
+  bucket_state_store = module.state_store.bucket
+  admin_ssh_key      = "../dummy_ssh_private"
+  aws_oidc_provider  = true
   service_account_external_permissions = [
     module.external_secrets.permissions
   ]
