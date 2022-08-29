@@ -1,6 +1,6 @@
 output "permissions" {
   value = {
-    name      = "external-secrets"
+    name      = "ext-secrets-old"
     namespace = "kube-system"
     aws = {
       inline_policy = <<EOT
